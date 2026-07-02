@@ -11,4 +11,17 @@ abstract class AuthRepository {
 
   /// Devuelve el usuario con sesion activa, o null si no hay sesion.
   Future<AppUser?> currentUser();
+
+  /// Lista todos los usuarios registrados en Firestore.
+  Future<List<AppUser>> getUsers();
+
+  /// Crea un nuevo usuario con correo/contrasena y guarda su perfil en
+  /// Firestore. La sesion actual se cierra tras la creacion (limitacion del
+  /// cliente Firebase). Devuelve el [AppUser] creado.
+  Future<AppUser> createUser({
+    required String email,
+    required String password,
+    required String name,
+    required UserRole role,
+  });
 }

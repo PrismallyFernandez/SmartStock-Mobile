@@ -12,4 +12,14 @@ class SaleRepositoryImpl implements SaleRepository {
 
   @override
   Future<Sale> registerSale(Sale sale) => _dataSource.registerSale(sale);
+
+  @override
+  Future<void> updateSale(Sale sale) => _dataSource.updateSale(sale);
+
+  @override
+  Future<void> deleteSale(String id) => _dataSource.deleteSale(id);
+
+  @override
+  Future<List<Sale>> getSalesByDateRange(DateTime start, DateTime end) =>
+      _dataSource.getSalesByDateRange(start, end);
 }

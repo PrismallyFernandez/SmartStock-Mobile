@@ -12,4 +12,13 @@ abstract class SaleRepository {
   ///
   /// Lanza [BusinessRuleException] si algun producto no tiene stock.
   Future<Sale> registerSale(Sale sale);
+
+  /// Actualiza campos editables de una venta (cliente y fecha).
+  Future<void> updateSale(Sale sale);
+
+  /// Elimina una venta y revierte el stock descontado, atomico.
+  Future<void> deleteSale(String id);
+
+  /// Ventas dentro de un rango de fechas (ambos inclusive).
+  Future<List<Sale>> getSalesByDateRange(DateTime start, DateTime end);
 }

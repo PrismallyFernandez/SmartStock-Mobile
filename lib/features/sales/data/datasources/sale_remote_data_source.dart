@@ -13,6 +13,9 @@ import '../models/sale_model.dart';
 abstract class SaleRemoteDataSource {
   Future<List<Sale>> getSales();
   Future<Sale> registerSale(Sale sale);
+  Future<void> updateSale(Sale sale);
+  Future<void> deleteSale(String id);
+  Future<List<Sale>> getSalesByDateRange(DateTime start, DateTime end);
 }
 
 class SaleRemoteDataSourceImpl implements SaleRemoteDataSource {
@@ -20,12 +23,18 @@ class SaleRemoteDataSourceImpl implements SaleRemoteDataSource {
 
   final FirebaseFirestore _firestore;
 
+  CollectionReference<Map<String, dynamic>> get _salesCol =>
+      _firestore.collection(FirestoreCollections.sales);
+
+  CollectionReference<Map<String, dynamic>> get _productsCol =>
+      _firestore.collection(FirestoreCollections.products);
+
+  CollectionReference<Map<String, dynamic>> get _entriesCol =>
+      _firestore.collection(FirestoreCollections.inventoryEntries);
+
   @override
   Future<List<Sale>> getSales() async {
-    final snap = await _firestore
-        .collection(FirestoreCollections.sales)
-        .orderBy('date', descending: true)
-        .get();
+    final snap = await _salesCol.orderBy('date', descending: true).get();
     return snap.docs.map((d) => SaleModel.fromMap(d.id, d.data())).toList();
   }
 
@@ -35,15 +44,13 @@ class SaleRemoteDataSourceImpl implements SaleRemoteDataSource {
       throw BusinessRuleException('La venta no tiene productos.');
     }
 
-    final products = _firestore.collection(FirestoreCollections.products);
-    final saleRef = _firestore.collection(FirestoreCollections.sales).doc();
-    final entries = _firestore.collection(FirestoreCollections.inventoryEntries);
+    final saleRef = _salesCol.doc();
 
     await _firestore.runTransaction((txn) async {
       // 1. Leer todos los productos involucrados (las lecturas van primero).
       final snapshots = <String, DocumentSnapshot<Map<String, dynamic>>>{};
       for (final item in sale.items) {
-        final ref = products.doc(item.productId);
+        final ref = _productsCol.doc(item.productId);
         final snap = await txn.get(ref);
         if (!snap.exists) {
           throw NotFoundException('Producto no encontrado: ${item.productName}');
@@ -65,7 +72,7 @@ class SaleRemoteDataSourceImpl implements SaleRemoteDataSource {
       // 3. Descontar stock y registrar movimiento de inventario por linea.
       for (final item in sale.items) {
         final stock = (snapshots[item.productId]!.data()!['stock'] as num).toInt();
-        txn.update(products.doc(item.productId), {
+        txn.update(_productsCol.doc(item.productId), {
           'stock': stock - item.quantity,
         });
 
@@ -78,7 +85,7 @@ class SaleRemoteDataSourceImpl implements SaleRemoteDataSource {
           date: sale.date,
           note: 'Venta ${saleRef.id.substring(0, 6).toUpperCase()}',
         );
-        txn.set(entries.doc(entry.id), {
+        txn.set(_entriesCol.doc(entry.id), {
           'productId': entry.productId,
           'productName': entry.productName,
           'quantity': entry.quantity,
@@ -101,5 +108,56 @@ class SaleRemoteDataSourceImpl implements SaleRemoteDataSource {
       sellerId: sale.sellerId,
       sellerName: sale.sellerName,
     );
+  }
+
+  @override
+  Future<void> updateSale(Sale sale) async {
+    await _salesCol.doc(sale.id).update({
+      'clientId': sale.clientId,
+      'clientName': sale.clientName,
+      'date': Timestamp.fromDate(sale.date),
+    });
+  }
+
+  @override
+  Future<void> deleteSale(String id) async {
+    await _firestore.runTransaction((txn) async {
+      final saleSnap = await txn.get(_salesCol.doc(id));
+      if (!saleSnap.exists) throw NotFoundException('Venta no encontrada.');
+
+      final sale = SaleModel.fromMap(id, saleSnap.data()!);
+
+      // Leer productos involucrados para restaurar stock.
+      final productSnaps = <String, DocumentSnapshot<Map<String, dynamic>>>{};
+      for (final item in sale.items) {
+        final ref = _productsCol.doc(item.productId);
+        productSnaps[item.productId] = await txn.get(ref);
+      }
+
+      // Restaurar stock y eliminar entradas de inventario.
+      for (final item in sale.items) {
+        final snap = productSnaps[item.productId];
+        if (snap != null && snap.exists) {
+          final stock = (snap.data()!['stock'] as num).toInt();
+          txn.update(_productsCol.doc(item.productId), {
+            'stock': stock + item.quantity,
+          });
+        }
+        txn.delete(_entriesCol.doc('$id-${item.productId}'));
+      }
+
+      // Eliminar la venta.
+      txn.delete(_salesCol.doc(id));
+    });
+  }
+
+  @override
+  Future<List<Sale>> getSalesByDateRange(DateTime start, DateTime end) async {
+    final snap = await _salesCol
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+        .where('date', isLessThanOrEqualTo: Timestamp.fromDate(end))
+        .orderBy('date', descending: true)
+        .get();
+    return snap.docs.map((d) => SaleModel.fromMap(d.id, d.data())).toList();
   }
 }

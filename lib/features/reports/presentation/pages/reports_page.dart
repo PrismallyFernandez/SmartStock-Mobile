@@ -23,6 +23,9 @@ class ReportsPage extends StatefulWidget {
 }
 
 class _ReportsPageState extends State<ReportsPage> {
+  DateTime? _startDate;
+  DateTime? _endDate;
+
   @override
   void initState() {
     super.initState();
@@ -31,6 +34,40 @@ class _ReportsPageState extends State<ReportsPage> {
       context.read<ProductProvider>().load();
       context.read<InventoryProvider>().load();
     });
+  }
+
+  Future<void> _pickStart() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _startDate ?? DateTime.now().subtract(const Duration(days: 30)),
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) setState(() => _startDate = picked);
+  }
+
+  Future<void> _pickEnd() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _endDate ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) setState(() => _endDate = picked);
+  }
+
+  Future<void> _applyFilter() async {
+    if (_startDate == null || _endDate == null) return;
+    final end = DateTime(_endDate!.year, _endDate!.month, _endDate!.day, 23, 59, 59);
+    await context.read<SaleProvider>().loadByDateRange(_startDate!, end);
+  }
+
+  Future<void> _clearFilter() async {
+    setState(() {
+      _startDate = null;
+      _endDate = null;
+    });
+    await context.read<SaleProvider>().load();
   }
 
   @override
@@ -54,6 +91,15 @@ class _ReportsPageState extends State<ReportsPage> {
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
             children: [
+              _DateFilterBar(
+                startDate: _startDate,
+                endDate: _endDate,
+                onPickStart: _pickStart,
+                onPickEnd: _pickEnd,
+                onApply: (_startDate != null && _endDate != null) ? _applyFilter : null,
+                onClear: (_startDate != null || _endDate != null) ? _clearFilter : null,
+              ),
+              const SizedBox(height: 24),
               GridView.count(
                 crossAxisCount: 2,
                 shrinkWrap: true,
@@ -96,6 +142,94 @@ class _ReportsPageState extends State<ReportsPage> {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _DateFilterBar extends StatelessWidget {
+  const _DateFilterBar({
+    required this.startDate,
+    required this.endDate,
+    required this.onPickStart,
+    required this.onPickEnd,
+    required this.onApply,
+    required this.onClear,
+  });
+
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final VoidCallback onPickStart;
+  final VoidCallback onPickEnd;
+  final VoidCallback? onApply;
+  final VoidCallback? onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Rango de fechas',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: onPickStart,
+                    child: Text(
+                      startDate == null
+                          ? 'Desde'
+                          : Formatters.date(startDate!),
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(Icons.arrow_forward_rounded,
+                    size: 16, color: AppColors.textMuted),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: onPickEnd,
+                    child: Text(
+                      endDate == null ? 'Hasta' : Formatters.date(endDate!),
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: onApply,
+                    child: const Text('Filtrar'),
+                  ),
+                ),
+                if (onClear != null) ...[
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: onClear,
+                      child: const Text('Limpiar'),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -20,11 +20,20 @@ class SaleProvider extends ChangeNotifier {
   SaleProvider({
     required GetSales getSales,
     required RegisterSale registerSale,
+    required UpdateSale updateSale,
+    required DeleteSale deleteSale,
+    required GetSalesByDateRange getSalesByDateRange,
   }) : _getSales = getSales,
-       _registerSale = registerSale;
+       _registerSale = registerSale,
+       _updateSale = updateSale,
+       _deleteSale = deleteSale,
+       _getSalesByDateRange = getSalesByDateRange;
 
   final GetSales _getSales;
   final RegisterSale _registerSale;
+  final UpdateSale _updateSale;
+  final DeleteSale _deleteSale;
+  final GetSalesByDateRange _getSalesByDateRange;
   final _uuid = const Uuid();
 
   List<Sale> _sales = [];
@@ -83,5 +92,37 @@ class SaleProvider extends ChangeNotifier {
     } catch (_) {
       return const SaleResult(error: 'No se pudo registrar la venta.');
     }
+  }
+
+  Future<String?> updateSale(Sale sale) async {
+    try {
+      await _updateSale(sale);
+      await load();
+      return null;
+    } on NotFoundException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'No se pudo actualizar la venta.';
+    }
+  }
+
+  Future<String?> deleteSale(String id) async {
+    try {
+      await _deleteSale(id);
+      await load();
+      return null;
+    } on NotFoundException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'No se pudo eliminar la venta.';
+    }
+  }
+
+  Future<void> loadByDateRange(DateTime start, DateTime end) async {
+    _isLoading = true;
+    notifyListeners();
+    _sales = await _getSalesByDateRange(start, end);
+    _isLoading = false;
+    notifyListeners();
   }
 }

@@ -20,4 +20,22 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<AppUser?> currentUser() => _dataSource.currentUser();
+
+  @override
+  Future<List<AppUser>> getUsers() => _dataSource.getUsers();
+
+  @override
+  Future<AppUser> createUser({
+    required String email,
+    required String password,
+    required String name,
+    required UserRole role,
+  }) {
+    return _dataSource.createUser(
+      email: email,
+      password: password,
+      name: name,
+      role: role,
+    );
+  }
 }

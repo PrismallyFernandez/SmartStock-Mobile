@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../auth/presentation/pages/users_page.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../categories/presentation/pages/categories_page.dart';
 import '../../../clients/presentation/pages/clients_page.dart';
 import '../../../reports/presentation/pages/reports_page.dart';
 
@@ -83,6 +85,27 @@ class MorePage extends StatelessWidget {
             subtitle: 'Gestiona la cartera de clientes',
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const ClientsPage()),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _MenuTile(
+            icon: Icons.category_rounded,
+            title: 'Categorias',
+            subtitle: 'Gestiona las categorias de productos',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const CategoriesPage()),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _MenuTile(
+            icon: Icons.people_rounded,
+            title: 'Usuarios',
+            subtitle: isAdmin
+                ? 'Crea y consulta usuarios del sistema'
+                : 'Solo disponible para administradores',
+            enabled: isAdmin,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const UsersPage()),
             ),
           ),
           const SizedBox(height: 12),

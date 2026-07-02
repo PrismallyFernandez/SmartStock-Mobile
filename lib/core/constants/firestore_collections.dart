@@ -4,6 +4,7 @@ class FirestoreCollections {
 
   static const String users = 'users';
   static const String products = 'products';
+  static const String categories = 'categories';
   static const String clients = 'clients';
   static const String sales = 'sales';
   static const String inventoryEntries = 'inventory_entries';

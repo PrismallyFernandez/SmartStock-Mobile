@@ -22,11 +22,17 @@ class AuthProvider extends ChangeNotifier {
   AppUser? _user;
   String? _errorMessage;
 
+  List<AppUser> _users = [];
+  bool _usersLoading = false;
+
   AuthStatus get status => _status;
   AppUser? get user => _user;
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _status == AuthStatus.authenticated;
   bool get isChecking => _status == AuthStatus.checking;
+
+  List<AppUser> get users => _users;
+  bool get usersLoading => _usersLoading;
 
   /// Restaura la sesion al iniciar la app (Firebase la mantiene persistida).
   Future<void> checkSession() async {
@@ -68,5 +74,44 @@ class AuthProvider extends ChangeNotifier {
     _user = null;
     _status = AuthStatus.unauthenticated;
     notifyListeners();
+  }
+
+  Future<void> loadUsers() async {
+    _usersLoading = true;
+    notifyListeners();
+    try {
+      _users = await _repository.getUsers();
+    } catch (_) {
+      _users = [];
+    }
+    _usersLoading = false;
+    notifyListeners();
+  }
+
+  /// Crea un usuario nuevo. La sesion del admin se cierra tras la creacion
+  /// (limitacion del SDK cliente de Firebase). Devuelve un mensaje de exito o
+  /// null si hubo error.
+  Future<String?> createUser({
+    required String email,
+    required String password,
+    required String name,
+    required UserRole role,
+  }) async {
+    try {
+      await _repository.createUser(
+        email: email,
+        password: password,
+        name: name,
+        role: role,
+      );
+      // El SDK cliente inicio sesion con el nuevo usuario; cerramos sesion
+      // para que el admin vuelva a iniciar sesion.
+      await logout();
+      return null;
+    } on InvalidCredentialsException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'No se pudo crear el usuario.';
+    }
   }
 }

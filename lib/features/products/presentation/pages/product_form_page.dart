@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/theme/app_colors.dart';
+import '../../../categories/presentation/providers/category_provider.dart';
 import '../../domain/entities/product.dart';
 import '../providers/product_provider.dart';
 
@@ -27,7 +29,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
   late final TextEditingController _cost;
   late final TextEditingController _stock;
   late final TextEditingController _threshold;
-  late final TextEditingController _category;
+  String _selectedCategory = '';
 
   bool _saving = false;
 
@@ -44,7 +46,10 @@ class _ProductFormPageState extends State<ProductFormPage> {
     _threshold = TextEditingController(
       text: p?.lowStockThreshold.toString() ?? '5',
     );
-    _category = TextEditingController(text: p?.category ?? '');
+    _selectedCategory = p?.category ?? '';
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<CategoryProvider>().load();
+    });
   }
 
   @override
@@ -56,7 +61,6 @@ class _ProductFormPageState extends State<ProductFormPage> {
     _cost.dispose();
     _stock.dispose();
     _threshold.dispose();
-    _category.dispose();
     super.dispose();
   }
 
@@ -77,7 +81,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
           cost: double.parse(_cost.text),
           stock: int.parse(_stock.text),
           lowStockThreshold: int.parse(_threshold.text),
-          category: _category.text.trim(),
+          category: _selectedCategory.trim(),
         ),
       );
     } else {
@@ -89,7 +93,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
         cost: double.parse(_cost.text),
         stock: int.parse(_stock.text),
         lowStockThreshold: int.parse(_threshold.text),
-        category: _category.text.trim(),
+        category: _selectedCategory.trim(),
       );
     }
 
@@ -115,8 +119,50 @@ class _ProductFormPageState extends State<ProductFormPage> {
     return null;
   }
 
+  Future<void> _addNewCategory() async {
+    final controller = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Nueva categoria'),
+        content: TextField(
+          controller: controller,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: const InputDecoration(labelText: 'Nombre'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () {
+              final n = controller.text.trim();
+              if (n.isNotEmpty) Navigator.pop(ctx, n);
+            },
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+
+    if (name == null || !mounted) return;
+    final error = await context.read<CategoryProvider>().create(name);
+    if (!mounted) return;
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+    } else {
+      setState(() => _selectedCategory = name);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final categoryProvider = context.watch<CategoryProvider>();
+    final categories = categoryProvider.categoryNames;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.isEditing ? 'Editar producto' : 'Nuevo producto'),
@@ -142,11 +188,23 @@ class _ProductFormPageState extends State<ProductFormPage> {
               validator: _required,
             ),
             const SizedBox(height: 16),
-            TextFormField(
-              controller: _category,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(labelText: 'Categoria'),
-              validator: _required,
+            DropdownButtonFormField<String>(
+              initialValue: _selectedCategory.isEmpty ? null : _selectedCategory,
+              decoration: InputDecoration(
+                labelText: 'Categoria',
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.add_rounded, color: AppColors.primary),
+                  onPressed: _addNewCategory,
+                ),
+              ),
+              isExpanded: true,
+              items: [
+                ...categories.map(
+                  (c) => DropdownMenuItem(value: c, child: Text(c)),
+                ),
+              ],
+              onChanged: (value) => setState(() => _selectedCategory = value ?? ''),
+              validator: (v) => (v == null || v.trim().isEmpty) ? 'Campo obligatorio' : null,
             ),
             const SizedBox(height: 16),
             TextFormField(

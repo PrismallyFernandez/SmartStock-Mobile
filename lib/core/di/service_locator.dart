@@ -30,6 +30,12 @@ import '../../features/sales/data/repositories/sale_repository_impl.dart';
 import '../../features/sales/domain/usecases/sale_usecases.dart';
 import '../../features/sales/presentation/providers/sale_provider.dart';
 
+// Categories
+import '../../features/categories/data/datasources/category_remote_data_source.dart';
+import '../../features/categories/data/repositories/category_repository_impl.dart';
+import '../../features/categories/domain/usecases/category_usecases.dart';
+import '../../features/categories/presentation/providers/category_provider.dart';
+
 // Inventory
 import '../../features/inventory/data/datasources/inventory_remote_data_source.dart';
 import '../../features/inventory/data/repositories/inventory_repository_impl.dart';
@@ -59,6 +65,8 @@ class ServiceLocator {
         ClientRepositoryImpl(ClientRemoteDataSourceImpl(firestore));
     final saleRepository =
         SaleRepositoryImpl(SaleRemoteDataSourceImpl(firestore));
+    final categoryRepository =
+        CategoryRepositoryImpl(CategoryRemoteDataSourceImpl(firestore));
     final inventoryRepository =
         InventoryRepositoryImpl(InventoryRemoteDataSourceImpl(firestore));
 
@@ -89,6 +97,17 @@ class ServiceLocator {
         create: (_) => SaleProvider(
           getSales: GetSales(saleRepository),
           registerSale: RegisterSale(saleRepository),
+          updateSale: UpdateSale(saleRepository),
+          deleteSale: DeleteSale(saleRepository),
+          getSalesByDateRange: GetSalesByDateRange(saleRepository),
+        ),
+      ),
+      ChangeNotifierProvider(
+        create: (_) => CategoryProvider(
+          getCategories: GetCategories(categoryRepository),
+          addCategory: AddCategory(categoryRepository),
+          updateCategory: UpdateCategory(categoryRepository),
+          deleteCategory: DeleteCategory(categoryRepository),
         ),
       ),
       ChangeNotifierProvider(

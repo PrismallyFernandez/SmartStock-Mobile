@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../../../core/constants/firestore_collections.dart';
 import '../../../../core/error/exceptions.dart';
+import '../../domain/entities/app_user.dart';
 import '../models/user_model.dart';
 
 /// Fuente de datos de autenticacion sobre Firebase.
@@ -13,6 +14,13 @@ abstract class AuthRemoteDataSource {
   Future<UserModel> login(String email, String password);
   Future<void> logout();
   Future<UserModel?> currentUser();
+  Future<List<UserModel>> getUsers();
+  Future<UserModel> createUser({
+    required String email,
+    required String password,
+    required String name,
+    required UserRole role,
+  });
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -48,6 +56,49 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   @override
   Future<void> logout() => _auth.signOut();
+
+  @override
+  Future<List<UserModel>> getUsers() async {
+    final snap = await _firestore
+        .collection(FirestoreCollections.users)
+        .orderBy('name')
+        .get();
+    return snap.docs.map((d) {
+      final data = d.data();
+      return UserModel.fromMap({'id': d.id, ...data});
+    }).toList();
+  }
+
+  @override
+  Future<UserModel> createUser({
+    required String email,
+    required String password,
+    required String name,
+    required UserRole role,
+  }) async {
+    try {
+      final credential = await _auth.createUserWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+      final uid = credential.user!.uid;
+      await _firestore.collection(FirestoreCollections.users).doc(uid).set({
+        'name': name.trim(),
+        'email': email.trim(),
+        'role': role.name,
+      });
+      // Cerrar sesion del nuevo usuario para no desplazar al administrador.
+      await _auth.signOut();
+      return UserModel(
+        id: uid,
+        name: name.trim(),
+        email: email.trim(),
+        role: role,
+      );
+    } on FirebaseAuthException catch (e) {
+      throw InvalidCredentialsException(_mapAuthError(e));
+    }
+  }
 
   /// Lee el documento `users/{uid}` con el nombre y rol del usuario.
   Future<UserModel> _profile(String uid, String email) async {
