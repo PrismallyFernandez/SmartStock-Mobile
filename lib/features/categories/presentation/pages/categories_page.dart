@@ -23,44 +23,56 @@ class _CategoriesPageState extends State<CategoriesPage> {
   }
 
   Future<void> _showForm([Category? category]) async {
-    final nameController = TextEditingController(text: category?.name ?? '');
     final result = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: Text(category == null ? 'Nueva categoria' : 'Editar categoria'),
-        content: TextField(
-          controller: nameController,
-          textCapitalization: TextCapitalization.sentences,
-          decoration: const InputDecoration(labelText: 'Nombre'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () {
-              final name = nameController.text.trim();
-              if (name.isNotEmpty) Navigator.pop(ctx, name);
-            },
-            child: const Text('Guardar'),
-          ),
-        ],
-      ),
-    );
-    nameController.dispose();
+      builder: (ctx) {
+        final nameController = TextEditingController(
+          text: category?.name ?? '',
+        );
 
-    if (result == null || !mounted) return;
+        return AlertDialog(
+          backgroundColor: AppColors.surface,
+          title: Text(
+            category == null ? 'Nueva categoria' : 'Editar categoria',
+          ),
+          content: TextField(
+            controller: nameController,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(labelText: 'Nombre'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () {
+                final name = nameController.text.trim();
+                if (name.isNotEmpty) {
+                  Navigator.pop(ctx, name);
+                }
+              },
+              child: const Text('Guardar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted || result == null) return;
 
     final provider = context.read<CategoryProvider>();
+
     final error = category == null
         ? await provider.create(result)
         : await provider.edit(Category(id: category.id, name: result));
 
     if (!mounted) return;
+
     if (error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error)));
     }
   }
 
@@ -84,6 +96,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
         ],
       ),
     );
+
     if (confirmed == true && mounted) {
       await context.read<CategoryProvider>().remove(category.id);
     }
@@ -104,7 +117,9 @@ class _CategoriesPageState extends State<CategoriesPage> {
           if (provider.isLoading && provider.categories.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
+
           final categories = provider.categories;
+
           if (categories.isEmpty) {
             return const Center(
               child: Text(
@@ -113,12 +128,14 @@ class _CategoriesPageState extends State<CategoriesPage> {
               ),
             );
           }
+
           return ListView.separated(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
             itemCount: categories.length,
             separatorBuilder: (_, _) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final cat = categories[index];
+
               return Card(
                 child: ListTile(
                   title: Text(
@@ -132,13 +149,17 @@ class _CategoriesPageState extends State<CategoriesPage> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.edit_rounded,
-                            color: AppColors.textSecondary),
+                        icon: const Icon(
+                          Icons.edit_rounded,
+                          color: AppColors.textSecondary,
+                        ),
                         onPressed: () => _showForm(cat),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.delete_rounded,
-                            color: AppColors.danger),
+                        icon: const Icon(
+                          Icons.delete_rounded,
+                          color: AppColors.danger,
+                        ),
                         onPressed: () => _confirmDelete(cat),
                       ),
                     ],
