@@ -11,6 +11,8 @@ Proyecto de la asignatura **Seminario de Proyectos II (ISW-411)** — UAPA.
 ## Tecnologías
 
 - Flutter (Dart)
+- Android Studio
+- Visual Studio
 - Provider
 - Clean Architecture
 - Firebase Authentication

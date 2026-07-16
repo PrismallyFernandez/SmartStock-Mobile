@@ -33,9 +33,7 @@ class _ProductsPageState extends State<ProductsPage> {
 
   Future<void> _openForm([Product? product]) async {
     final saved = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => ProductFormPage(product: product),
-      ),
+      MaterialPageRoute(builder: (_) => ProductFormPage(product: product)),
     );
     if (saved == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -158,8 +156,10 @@ class _ProductCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               alignment: Alignment.center,
-              child: const Icon(Icons.inventory_2_rounded,
-                  color: AppColors.primary),
+              child: const Icon(
+                Icons.inventory_2_rounded,
+                color: AppColors.primary,
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -202,8 +202,10 @@ class _ProductCard extends StatelessWidget {
             if (canManage)
               PopupMenuButton<String>(
                 color: AppColors.surfaceElevated,
-                icon: const Icon(Icons.more_vert_rounded,
-                    color: AppColors.textSecondary),
+                icon: const Icon(
+                  Icons.more_vert_rounded,
+                  color: AppColors.textSecondary,
+                ),
                 onSelected: (value) {
                   if (value == 'edit') onEdit();
                   if (value == 'delete') onDelete();
